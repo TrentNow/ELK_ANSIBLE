@@ -1,0 +1,17 @@
+[local]
+localhost
+
+[Amazon_Linux_1]
+10.0.1.143
+
+[Amazon_Linux_2]
+10.0.1.116
+
+[ELK_SERVER]
+10.0.1.21
+
+[ELK_CLIENT]
+10.0.1.120
+
+[Ubuntu]
+10.0.1.170

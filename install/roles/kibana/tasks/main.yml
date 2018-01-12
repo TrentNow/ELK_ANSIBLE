@@ -1,0 +1,26 @@
+---
+
+- name: Add Kibana repo
+  yum_repository:
+    name: Kibana repository for 4.4.x packages
+    description: Enable Kibana
+    baseurl: https://artifacts.elastic.co/packages/5.x/yum
+    gpgkey: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    gpgcheck: yes
+
+- name: Update repositories cache and for Kibana
+  yum:
+   name: kibana
+   state: present
+
+- name: Updating the config file to restrict outside access
+  lineinfile:
+    destfile: /etc/elasticsearch/elasticsearch.yml
+    regexp: 'server.host:'
+    line: 'server.host: 10.0.1.21'
+
+- name: Restarting Kibana
+  service:
+   name: elasticsearch
+   state: restarted
+   enabled: yes

@@ -1,0 +1,16 @@
+---
+#
+## Playbook to install the ELK stack
+##
+- hosts: ELK_SERVER
+  remote_user: ansible
+  become: yes
+  become_user: root
+  connection: ssh
+  gather_facts: yes
+  roles:
+  - { role: java }
+  - { role: elasticsearch }
+  - { role: kibana }
+  - { role: nginx }
+  - { role: logstash }

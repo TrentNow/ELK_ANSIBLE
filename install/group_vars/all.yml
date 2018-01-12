@@ -1,0 +1,68 @@
+---
+# The hostname of the server that is going to run the ELK stack
+server_name: ELK_SERVER
+# # -- Nginx Variables --
+# # The port that Nginx listens to that is forwarded to Kibana's local port
+nginx_kibana_port: 80
+# # Nginx SSL listening port
+elk_server_ssl_cert_port: 8080
+# # The web authentication credentials to gain access to Kibana
+kibana_user: admin
+kibana_password: admin
+# # The system user that Nginx will use
+nginx_user: www-data
+# # The IP address of the ELK server that is going to be installed
+elk_ip: ec2-34-236-153-61.compute-1.amazonaws.com
+
+java_download_url: http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.tar.gz
+
+java_archive_name: jdk-8u131-linux-x64.tar.gz
+
+java_root_dir: /usr/share/java-1.8.0
+
+java_jdk_dir: "{{ java_root_dir }}/jdk1.8.0_131"
+
+elk_domain: ''
+elk_network: 'backend'
+elk_storage_path: '/var/containers/elk'
+elk_config_path: '/etc/elk'
+elk_logs_path: '/var/log/elk'
+elk_certs_path: '/etc/ssl'
+elk_certs_expire: 365
+elk_certs_host: '{{ ansible_eth0.ipv4.address }}'
+
+elk_elastic_password: 'Ashton@@615'
+elk_kibana_password: 'Ashton@@615'
+elk_logstash_password: 'Ashton@@615'
+
+elk_elasticsearch_image: 'docker.elastic.co/elasticsearch/elasticsearch:5.6.0'
+elk_elasticsearch_volume: 'elasticsearch_volume'
+elk_elasticsearch_container: 'elasticsearch'
+elk_elasticsearch_cluster_name: 'elastic'
+elk_elasticsearch_discovery_type: 'single-node'
+elk_elasticsearch_log_driver: 'json-file'
+elk_elasticsearch_log_options:
+  labels: elasticsearch
+  max-size: 10m
+elk_elasticsearch_memory_limit: 1g
+elk_elasticsearch_restart_policy: 'on-failure'
+
+elk_kibana_image: 'docker.elastic.co/kibana/kibana:5.6.0'
+elk_kibana_container: 'kibana'
+elk_kibana_log_driver: 'json-file'
+elk_kibana_log_options:
+  labels: kibana
+  max-size: 10m
+elk_kibana_restart_policy: 'on-failure'
+
+elk_logstash_image: 'docker.elastic.co/logstash/logstash:5.6.0'
+elk_logstash_container: 'logstash'
+elk_logstash_log_driver: 'json-file'
+elk_logstash_log_options:
+  labels: logstash
+  max-size: 10m
+elk_logstash_published_ports:
+  - 5044:5044
+elk_logstash_restart_policy: 'on-failure'
+
+elk_nginx_container: 'nginx'

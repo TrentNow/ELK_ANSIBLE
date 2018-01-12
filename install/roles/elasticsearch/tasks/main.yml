@@ -1,0 +1,32 @@
+---
+
+- name: Add elasticsearch key
+  rpm_key: 
+    key: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    state: present
+
+- name: Add Elasticsearch repo
+  yum_repository:
+    name: elasticsearch-6.x
+    description: Enable elasticsearch repo
+    baseurl: https://artifacts.elastic.co/packages/6.x/yum
+    gpgkey: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    gpgcheck: yes
+
+- name: Update repositories cache and install Elasticsearch
+  yum: name=elasticsearch state=present
+
+
+- name: Updating the config file to restrict outside access
+  lineinfile:
+    destfile: /etc/elasticsearch/elasticsearch.yml
+    regexp: 'network.host:'
+    line: 'network.host: 10.0.1.21'
+  
+
+
+- name: Restarting Elasticsearch
+  service:
+   name: elasticsearch
+   state: restarted
+   enabled: yes

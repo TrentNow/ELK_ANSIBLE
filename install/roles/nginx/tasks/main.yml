@@ -1,0 +1,68 @@
+---
+
+- name: pull down epel release repo
+  get_url:
+    url: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    dest: /tmp
+
+- name: Install epel release
+  yum: name=epel-release-latest-7.noarch.rpm state=installed update_cache=yes
+
+- name: Install nginx from epel repo
+  yum: name=nginx state=installed
+  notify:
+  - Start Nginx
+
+- name: Install nginx from epel repo
+  yum: name=httpd-tools state=installed
+
+- name: Create nginx directory structure
+  file: path=/etc/nginx/conf.d/
+    state=directory
+    mode=0755
+
+- name: Create nginx directory structure
+  file: path=/etc/nginx/sites-available/default
+    state=directory
+    mode=0755
+
+- name: Setup Nginx reverse proxy for kibana
+  template:
+    src=kibana.conf.j2
+    dest=/etc/nginx/sites-available/default
+    owner=root
+    group=root
+    mode=0644
+  register: nginx_needs_restart
+
+- name: Starting nginx and persisting after boot
+  service: name=nginx state=restarted enabled=yes
+
+- name: Install python-pexpect
+  yum: name=python-setuptools state=installed update_cache=yes
+
+- name: Create kibana admin user
+  template:
+    src=kibanaAdmin.j2
+    dest=/tmp/kibana
+    owner=root
+    group=root
+    mode=0744
+
+- name: Install pip for managing python packages
+  yum:
+    name: python-pip
+    state: installed
+
+- name: Install pexpect
+  shell: pip install pexpect
+   
+- name: Create Kibana admin user
+  expect:
+    command: bash /tmp/kibana
+    responses:
+      'Password:' : "{{kibana_password}}"
+
+- name: Restart Nginx
+  service: name=nginx state=restarted
+

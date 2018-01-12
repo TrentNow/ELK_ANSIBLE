@@ -1,0 +1,130 @@
+---
+
+
+- name: Add Logstash repo
+  yum_repository:
+    name: logstash repository for 2.2 packages
+    description: Enable Logstash
+    baseurl: http://packages.elasticsearch.org/logstash/2.2/centos
+    gpgkey: http://packages.elasticsearch.org/GPG-KEY-elasticsearch
+    gpgcheck: yes
+
+- name: Install logstash
+  yum: pkg={{ item }} state=present
+  with_items:
+    - logstash
+    - openssl
+
+- name: Creates SSL directories
+  file:
+    path: /etc/pki/tls/certs
+    state: directory
+
+- name: Creates SSL directories
+  file:
+    path: /etc/pki/tls/private
+    state: directory
+
+- name: Prepare folder for certificates
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "{{ elk_certs_path }}"
+
+- name: Generate private keys
+  shell: openssl genrsa -out {{ item }}.crt 4096
+  args:
+    chdir: "{{ elk_certs_path }}"
+    creates: "{{ item }}.crt"
+  with_items:
+    - ca-key
+    - logstash-key
+    - filebeat-key
+
+- name: Convert private keys to pcks8
+  shell: openssl pkcs8 -topk8 -inform pem -in {{ item }}.crt -outform pem -nocrypt -out {{ item }}.pem
+  args:
+    chdir: "{{ elk_certs_path }}"
+    creates: "{{ item }}.pem"
+  with_items:
+    - ca-key
+    - logstash-key
+    - filebeat-key
+
+- name: Generate CA public key
+  shell: openssl req -new -x509 -days {{ elk_certs_expire }} -key ca-key.pem -sha256 -out ca.pem -subj "/CN={{ inventory_hostname }}"
+  args:
+    chdir: "{{ elk_certs_path }}"
+    creates: ca.pem
+
+- name: Generate logstash csr
+  shell: openssl req -subj "/CN={{ inventory_hostname }}" -sha256 -new -key logstash-key.pem -out logstash.csr
+  args:
+    chdir: "{{ elk_certs_path }}"
+    creates: logstash.csr
+
+- name: Prepare extfile for certificate generation
+  shell: echo subjectAltName = DNS:{{ elk_certs_host }},IP:{{ elk_certs_host }},IP:10.0.1.21 > extfile.cnf
+  args:
+    chdir: "{{ elk_certs_path }}"
+    creates: extfile.cnf
+
+- name: Generate logstash certificate
+  shell: openssl x509 -req -days {{ elk_certs_expire }} -sha256 -in logstash.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out logstash.pem -extfile extfile.cnf
+  args:
+    chdir: "{{ elk_certs_path }}"
+    creates: logstash.pem
+
+- name: Generate filebeat csr
+  shell: openssl req -subj "/CN=filebeat" -new -key filebeat-key.pem -out filebeat.csr
+  args:
+    chdir: "{{ elk_certs_path }}"
+    creates: filebeat.csr
+
+- name: Prepare extfile for certificate generation
+  shell: echo extendedKeyUsage = clientAuth > extfile.cnf
+  args:
+    chdir: "{{ elk_certs_path }}"
+
+- name: Generate filebeat certificate
+  shell: openssl x509 -req -days {{ elk_certs_expire }} -sha256 -in filebeat.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out filebeat.pem -extfile extfile.cnf
+  args:
+    chdir: "{{ elk_certs_path }}"
+    creates: filebeat.pem
+
+- name: Fetch filebeat certificates
+  fetch: src={{ elk_certs_path }}/{{ item }} dest={{ playbook_dir }}/.certs/elk/{{ item }} flat=yes
+  with_items:
+    - ca.pem
+    - filebeat-key.pem
+    - filebeat.pem
+
+
+- name: Configure Beats configuration file
+  template:
+    src=beats-input.conf.j2
+    dest=/etc/logstash/conf.d/02-beats-input.conf
+    owner=root
+    group=root
+    mode=0644
+
+- name: Configure Syslog Filter
+  template:
+    src=syslog-filter.conf.j2
+    dest=/etc/logstash/conf.d/10-syslog-filter.conf
+    owner=root
+    group=root
+    mode=0644
+
+- name: Configure Elasticsearch output file
+  template:
+    src=elasticsearch-output.conf.j2
+    dest=/etc/logstash/conf.d/30-elasticsearch-output.conf
+    owner=root
+    group=root
+    mode=0644
+
+- name: Start Logstash
+  service: name=logstash state=started enabled=yes 
+
